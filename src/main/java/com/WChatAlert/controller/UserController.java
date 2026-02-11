@@ -12,7 +12,7 @@ import com.WChatAlert.service.UserService;
 
 
 @RestController
-@RequestMapping("/who/users")
+@RequestMapping("/user/")
 public class UserController {
 	private UserService userService;
 
@@ -20,15 +20,12 @@ public class UserController {
 		this.userService = userService;
 	}
 	
-	@PostMapping()
+	@PostMapping("/register")
 	public User createUser(@RequestBody User user) {
 		System.out.println("User Receved");
 		return userService.createUser(user);
 	}
 	
-	@PostMapping("/login")
-	public LoginResponseDTO login(@RequestBody LoginRequestDTO dto) {
-		return userService.login(dto);
-	}
+	
 
 }
