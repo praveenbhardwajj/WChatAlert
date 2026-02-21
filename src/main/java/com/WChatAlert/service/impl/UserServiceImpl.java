@@ -1,5 +1,9 @@
 package com.WChatAlert.service.impl;
 
+import java.time.LocalDateTime;
+
+import java.util.Random;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -11,8 +15,9 @@ import com.WChatAlert.entity.User;
 import com.WChatAlert.repository.UserRepository;
 import com.WChatAlert.security.JwtUtil;
 import com.WChatAlert.dto.LoginResponseDTO;
-
+import com.WChatAlert.email.EmailService;
 import com.WChatAlert.service.UserService;
+import java.util.Random;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -25,58 +30,87 @@ public class UserServiceImpl implements UserService {
 	// pauthenticationmanage
 	private final AuthenticationManager authenticationManager;
 
+	private final EmailService emailService;
+
 	public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
-			AuthenticationManager authenticationManager) {
+			AuthenticationManager authenticationManager, EmailService emailService) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtUtil = jwtUtil;
 		this.authenticationManager = authenticationManager;
+		this.emailService = emailService;
 	}
 
 	@Override
 	public User createUser(User user) {
 
-		// Set hashing for password
 		user.setPassword(passwordEncoder.encode(user.getPassword()));
-		// New user always unverified
-		user.setVerified(true);
-		return userRepository.save(user);
+
+		String otp = String.valueOf(new Random().nextInt(900000) + 100000);
+
+		user.setOtp(otp);
+		user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+		user.setVerified(false);
+
+		User savedUser = userRepository.save(user);
+
+		try {
+			emailService.sendOtp(user.getEmail(), otp, user.getName());
+		} catch (Exception e) {
+			e.printStackTrace(); // Ye real error dikha dega
+			throw new RuntimeException("Failed to send OTP email: " + e.getMessage());
+		}
+
+		return savedUser;
 	}
 
-//	@Override
-//	public LoginResponseDTO login(LoginRequestDTO dto) {
-//		// TODO Auto-generated method stub
-//		User user;
-//
-//		// login by email or number // filer for email
-//		if (dto.getEmailOrNumber().contains("@")) {
-//			user = userRepository.findByEmail(dto.getEmailOrNumber())
-//					.orElseThrow(() -> new RuntimeException("User not Found With This Email"));
-//		} else {
-//			user = userRepository.findByWhatsappNumber(dto.getEmailOrNumber())
-//					.orElseThrow(() -> new RuntimeException("No user found wit this Phone number"));
-//		}
-//		// check password using encode.match
-//		if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-//			throw new RuntimeException("Invlid Password");
-//		}
-//
-//		if (!user.isVerified()) {
-//			throw new RuntimeException("User not verified");
-//		}
-//		return new LoginResponseDTO("Login successful", true);
-//	}
 	@Override
 	public LoginResponseDTO login(LoginRequestDTO dto) {
-		Authentication authentication=authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(dto.getEmailOrNumber(), dto.getPassword()));
-		
-		String token =jwtUtil.genrateToken(authentication.getName());
-		
+
+		// Authenticate user
+		Authentication authentication = authenticationManager
+				.authenticate(new UsernamePasswordAuthenticationToken(dto.getEmailOrNumber(), dto.getPassword()));
+
+		// Get user from database
+		User user = userRepository.findByEmail(authentication.getName())
+				.orElseThrow(() -> new RuntimeException("User not found"));
+
+		// 3Check if email is verified
+		if (!user.isVerified()) {
+			throw new RuntimeException("Email not verified. Please verify OTP first.");
+		}
+
+		// Generate JWT token
+		String token = jwtUtil.genrateToken(authentication.getName());
+
+		// 5Prepare response
 		LoginResponseDTO response = new LoginResponseDTO();
 		response.setToken(token);
-		response.setSuccess(true); 
-		response.setMessage("Login Succesfull");
+		response.setSuccess(true);
+		response.setMessage("Login Successful");
+		response.setName(user.getName()); // real name from DB
+
 		return response;
 	}
-	
+
+	@Override
+	public void verifyOtp(String email, String otp) {
+
+		User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+
+		if (user.getOtp() == null || !user.getOtp().equals(otp)) {
+			throw new RuntimeException("Invalid OTP");
+		}
+
+		if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
+			throw new RuntimeException("OTP expired");
+		}
+
+		user.setVerified(true);
+		user.setOtp(null);
+		user.setOtpExpiry(null);
+
+		userRepository.save(user);
+	}
+
 }

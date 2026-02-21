@@ -8,4 +8,7 @@ public interface UserService {
 	User createUser(User user);
 
 	LoginResponseDTO login(LoginRequestDTO dto);
+	
+	void verifyOtp(String email, String otp);
+
 }

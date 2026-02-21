@@ -1,5 +1,7 @@
 package com.WChatAlert.entity;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -14,14 +16,47 @@ public class User {
 
 	@Column(unique = true)
 	private String email;
+
+	@Column(unique = true, nullable = false)
+	private String whatsappNumber;
 	
 	@Column(nullable = false)
 	private String password;
-	
-	@Column(unique = true, nullable = false)
-	private String whatsappNumber;
 
-	private boolean verified = true;
+	private boolean verified = false;
+	
+	private String otp;
+	
+	private LocalDateTime otpExpiry;
+
+	public User(Long id, String name, String email, String whatsappNumber, String password, boolean verified,
+			String otp, LocalDateTime otpExpiry) {
+		super();
+		this.id = id;
+		this.name = name;
+		this.email = email;
+		this.whatsappNumber = whatsappNumber;
+		this.password = password;
+		this.verified = verified;
+		this.otp = otp;
+		this.otpExpiry = otpExpiry;
+	}
+
+	public String getOtp() {
+		return otp;
+	}
+
+	public void setOtp(String otp) {
+		this.otp = otp;
+	}
+
+	public LocalDateTime getOtpExpiry() {
+		return otpExpiry;
+	}
+
+	public void setOtpExpiry(LocalDateTime otpExpiry) {
+		this.otpExpiry = otpExpiry;
+	}
 
 	public Long getId() {
 		return id;

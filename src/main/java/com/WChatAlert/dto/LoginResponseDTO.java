@@ -3,6 +3,24 @@ package com.WChatAlert.dto;
 public class LoginResponseDTO {
 	private String message;
 	private Boolean success;
+	private String name;
+	
+	public LoginResponseDTO(String message, Boolean success, String name, String token) {
+		super();
+		this.message = message;
+		this.success = success;
+		this.name = name;
+		this.token = token;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
 	private String token;
 	
 	public String getToken() {

@@ -12,7 +12,7 @@ import com.WChatAlert.service.UserService;
 
 
 @RestController
-@RequestMapping("/user/")
+@RequestMapping("/user")
 public class UserController {
 	private UserService userService;
 
